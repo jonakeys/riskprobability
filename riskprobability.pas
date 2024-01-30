@@ -65,10 +65,6 @@ begin
   gaLoseRolls[3,2]:= 2275/7776;
   gaTieRolls[2,2]:= 420/1296;
   gaTieRolls[3,2]:= 2611/7776;
-  gaTieRolls[1,1]:= 0;
-  gaTieRolls[1,2]:= 0;
-  gaTieRolls[2,1]:= 0;
-  gaTieRolls[3,1]:= 0;
 end;
 
 procedure InitializeBaseBattles;
