@@ -7,11 +7,17 @@ program riskprobability;
 
 uses math, unix;
 
-var gaProbability: Array[0..200, 0..200] of real;	// array for storing results
-    gaWinRolls: Array[0..3, 0..2] of real;				// odds for roll win
-    gaLoseRolls: Array[0..3, 0..2] of real;				// odds for roll lose
-    gaTieRolls: Array[0..3, 0..2] of real;				// odds for roll win
-    giMAXNUM: integer = 100;
+    // max armies attack and defense
+var giMAXNUM: integer = 100;
+    // array for storing results ('200' must be changed to 2 * giMAXNUM)
+    gaProbability: Array[0..200, 0..200] of real;
+    // odds for roll win
+    gaWinRolls: Array[0..3, 0..2] of real;
+    // odds for roll lose
+    gaLoseRolls: Array[0..3, 0..2] of real;
+    // odds for roll win
+    gaTieRolls: Array[0..3, 0..2] of real;
+
 
 // Execute battle with specified amount of attacking and defending armies
 function RunBattle(aAttackDice, aDefenseDice: integer): real;
