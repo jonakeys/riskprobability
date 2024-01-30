@@ -2,90 +2,104 @@
 	Program to calculate the probabilities of winning battles in the game of Risk
 	when using different army sizes for attacking and defending.
 }
+
 program riskprobability;
 
 uses math, unix;
 
-var	Answer: real = 0;
-    AttArmies, DefArmies: integer;
-    RollAtt, RollDef: real;
-    ProbArray: Array[0..10, 0..10] of real;
+var gaProbability: Array[0..200, 0..200] of real;
+    gaWinRolls: Array[0..3, 0..2] of real;
+    gaLoseRolls: Array[0..3, 0..2] of real;
+    gaTieRolls: Array[0..3, 0..2] of real;
+    giMAXNUM: integer = 100;
 
-// Base battle [1,1]
-function BaseBattle(aAttArmies, aDefArmies: integer): real;
-var i: integer;
+function RunBattle(aAttackDice, aDefenseDice: integer): real;
+var AttackDiceRoll, DefenseDiceRoll: integer;
+		Delta: integer = 1;
 begin
-	BaseBattle:= 0;
-	for i:= 5 downto 1 do
-  begin
-		BaseBattle:= BaseBattle + (i/6);  	
+  if aAttackDice <= 0 then begin
+  	Exit(0);
   end;
-  BaseBattle:= BaseBattle/6;
-end;
+  if aDefenseDice <= 0 then begin
+   	Exit(1);
+  end;
 
-// Roll with more attacking armies
-function MoreAttack(aAttArmies, aDefArmies: integer): real;
-var i: integer;
-begin
-	MoreAttack:= 0;
-	for i:= 1 to 5 do
-  begin
-    MoreAttack:= MoreAttack + Power((1/6), 3) * (2*(Sqr(i)) + i);
-	end;
-end;
+  if gaProbability[aAttackDice, aDefenseDice] = 0.00 then begin
+    if aAttackDice > 3 then begin
+    	AttackDiceRoll:= 3;
+    end else begin
+	   	AttackDiceRoll:= aAttackDice;
+    end;
 
-// Roll with more defending armies
-function MoreDefense(aAttArmies: integer; aDefArmies: integer): real;
-var i: integer;
-begin
-	MoreDefense:= 0;
-  for i:= 2 to 6 do
-  begin
-  	MoreDefense:= MoreDefense + Power((1/6), 3) * Sqr(i-1);
+		if aDefenseDice > 2 then begin
+    	DefenseDiceRoll:= 2
+    end else begin
+     	DefenseDiceRoll:= aDefenseDice;
+    end;
+
+    if (AttackDiceRoll >= 2) and (DefenseDiceRoll = 2) then begin
+     	Delta:= 2;
+    end;
+
+    RunBattle:= gaWinRolls[AttackDiceRoll, DefenseDiceRoll] * RunBattle(aAttackDice, aDefenseDice-Delta)
+    	          + gaTieRolls[AttackDiceRoll, DefenseDiceRoll] * RunBattle(aAttackDice-1, aDefenseDice-1)
+       	        + gaLoseRolls[AttackDiceRoll, DefenseDiceRoll] * RunBattle(aAttackDice-Delta, aDefenseDice);
+ 	end else begin
+    RunBattle:= gaProbability[aAttackDice, aDefenseDice];
   end;
 end;
 
-// Battle with more attacking armies
-function AttBattle(aAttArmies, aDefArmies: integer): real;
-var TempMoreAttack, TempBaseBattle: real;
+procedure InitializeRolls;
 begin
-	AttBattle:= 0;
-  TempMoreAttack:= MoreAttack(aAttArmies, aDefArmies);
-  TempBaseBattle:= BaseBattle(1, 1);
-	AttBattle:= TempMoreAttack * TempBaseBattle					// win both battles
-  						+ (1-TempMoreAttack) * TempBaseBattle		// lose/tie first, win second
-              + TempMoreAttack * (1-TempBaseBattle);	// win first, lose/tie second
+	gaWinRolls[1,1]:= 15/36;
+  gaWinRolls[1,2]:= 55/216;
+  gaWinRolls[2,1]:= 125/216;
+  gaWinRolls[2,2]:= 295/1296;
+  gaWinRolls[3,1]:= 855/1296;
+  gaWinRolls[3,2]:= 2890/7776;
+  gaLoseRolls[1,1]:= 21/36;
+  gaLoseRolls[1,2]:= 161/216;
+  gaLoseRolls[2,1]:= 91/216;
+  gaLoseRolls[2,2]:= 581/1296;
+  gaLoseRolls[3,1]:= 441/1296;
+  gaLoseRolls[3,2]:= 2275/7776;
+  gaTieRolls[2,2]:= 420/1296;
+  gaTieRolls[3,2]:= 2611/7776;
+  gaTieRolls[1,1]:= 0;
+  gaTieRolls[1,2]:= 0;
+  gaTieRolls[2,1]:= 0;
+  gaTieRolls[3,1]:= 0;
 end;
 
-// Battle with more defending armies
-function DefBattle(aAttArmies, aDefArmies: integer): real;
+procedure InitializeBaseBattles;
 begin
-  DefBattle:= MoreDefense(aAttArmies, aDefArmies) * BaseBattle(1, 1);
-end;                                                                	
-
-// Print probability of roll
-procedure PrintRollProbability(aAttArmies, aDefArmies: integer; aAnswer: real);
-begin
-  writeln('  P(R|[', aAttArmies, ',', aDefArmies, ']): ', aAnswer:0:4);
+	gaProbability[1, 1]:= 5/12;
+  gaProbability[1, 2]:= 55/216 * 5/12;
+  gaProbability[2, 1]:= 125/216 + (1-(125/216)) * 5/12;
 end;
 
-// Print probability of batlle
-procedure PrintBattleProbability(aAttArmies, aDefArmies: integer; aAnswer: real);
-begin
-  writeln('  P(B|[', aAttArmies, ',', aDefArmies, ']): ', aAnswer:0:4);
-end;
-
-procedure PrintProbArray;
+procedure CalculateBattles;
 var i, j: integer;
 begin
-	writeln;
-  writeln('      1       2       3       4       5       6       7       8       9      10');
-	for i:= 1 to 10 do
+	for i:= 4 to giMAXNUM*2 do begin
+  	for j:= 1 to i do begin
+			if ((j + (i-j)) = i) and ((j<=giMAXNUM) and ((i-j)<=giMAXNUM)) then begin
+    		gaProbability[j, i-j]:= RunBattle(j, i-j);
+    	end;
+    end;
+  end;
+end;
+
+procedure PrintProbabilities;
+var i, j: integer;
+begin
+  writeln('      1       2       3       4       5       6       7       8       9      10      11      12      13      14      15      16      17      18      19      20');
+	for i:= 1 to 20 do
   	begin
     	write(i:2, ' ');
-  		for j:= 1 to 10 do
+  		for j:= 1 to 20 do
     		begin
-          write(ProbArray[j, i]:0:4, '  ');
+          write(gaProbability[j, i]:0:4, '  ');
       	end;
       writeln;		
     end;
@@ -94,43 +108,11 @@ end;
 begin
 	unix.fpSystem('clear');	// Clear terminal
 
-  AttArmies:=1;
-  DefArmies:=1;
-  //RollBase:= BaseBattle(AttArmies, DefArmies);
-  ProbArray[1, 1]:= BaseBattle(AttArmies, DefArmies);
-  AttArmies:=2;
-  DefArmies:=1;
-  RollAtt:= MoreAttack(AttArmies, DefArmies);
-  //RollAttBattle:= AttBattle(AttArmies, DefArmies);
-  ProbArray[2, 1]:= AttBattle(AttArmies, DefArmies);
-  AttArmies:=1;
-  DefArmies:=2;
-  RollDef:= MoreDefense(AttArmies, DefArmies);
-  //RollDefBattle:= DefBattle(AttArmies, DefArmies);
-  ProbArray[1, 2]:= DefBattle(AttArmies, DefArmies);
+  InitializeRolls;
+  InitializeBaseBattles;
+  CalculateBattles;
 
   writeln('Probability of Risk-battles');
-  writeln('  Roll:   P(R|[a,d])');
-  writeln('  Battle: P(B|[a,d])');
-  writeln('  a=attacker, d=defender');
 	writeln;
-
-  AttArmies:= 1;
-  DefArmies:= 1;
-	PrintRollProbability(AttArmies, DefArmies, ProbArray[1, 1]);
-  PrintBattleProbability(AttArmies, DefArmies, ProbArray[1, 1]);
-  writeln;
-
-  AttArmies:= 2;
-  DefArmies:= 1;
-  PrintRollProbability(AttArmies, DefArmies, RollAtt);
-  PrintBattleProbability(AttArmies, DefArmies, ProbArray[2, 1]);
-	writeln;
-
-  AttArmies:= 1;
-  DefArmies:= 2;
-  PrintRollProbability(AttArmies, DefArmies, RollDef);
-  PrintBattleProbability(AttArmies, DefArmies, ProbArray[1, 2]);
-	
-  PrintProbArray;
+  PrintProbabilities;
 end.
