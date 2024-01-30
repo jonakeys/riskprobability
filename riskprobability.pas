@@ -7,48 +7,57 @@ program riskprobability;
 
 uses math, unix;
 
-var gaProbability: Array[0..200, 0..200] of real;
-    gaWinRolls: Array[0..3, 0..2] of real;
-    gaLoseRolls: Array[0..3, 0..2] of real;
-    gaTieRolls: Array[0..3, 0..2] of real;
+var gaProbability: Array[0..200, 0..200] of real;	// array for storing results
+    gaWinRolls: Array[0..3, 0..2] of real;				// odds for roll win
+    gaLoseRolls: Array[0..3, 0..2] of real;				// odds for roll lose
+    gaTieRolls: Array[0..3, 0..2] of real;				// odds for roll win
     giMAXNUM: integer = 100;
 
+// Execute battle with specified amount of attacking and defending armies
 function RunBattle(aAttackDice, aDefenseDice: integer): real;
 var AttackDiceRoll, DefenseDiceRoll: integer;
 		Delta: integer = 1;
 begin
-  if aAttackDice <= 0 then begin
+  if aAttackDice <= 0 then begin	// 0 attack armies is a lose
   	Exit(0);
   end;
-  if aDefenseDice <= 0 then begin
+  if aDefenseDice <= 0 then begin	// 0 defense armies is a win
    	Exit(1);
   end;
 
+  // If value not yet calculated, process the battle(s)
   if gaProbability[aAttackDice, aDefenseDice] = 0.00 then begin
+    // Test if more attacking dice than allowed for a roll
     if aAttackDice > 3 then begin
     	AttackDiceRoll:= 3;
     end else begin
 	   	AttackDiceRoll:= aAttackDice;
     end;
 
+    // Test if more defending dice than allowed for a roll
 		if aDefenseDice > 2 then begin
     	DefenseDiceRoll:= 2
     end else begin
      	DefenseDiceRoll:= aDefenseDice;
     end;
-
+		
+    // Allow losing two dice when possible
     if (AttackDiceRoll >= 2) and (DefenseDiceRoll = 2) then begin
      	Delta:= 2;
     end;
 
-    RunBattle:= gaWinRolls[AttackDiceRoll, DefenseDiceRoll] * RunBattle(aAttackDice, aDefenseDice-Delta)
-    	          + gaTieRolls[AttackDiceRoll, DefenseDiceRoll] * RunBattle(aAttackDice-1, aDefenseDice-1)
-       	        + gaLoseRolls[AttackDiceRoll, DefenseDiceRoll] * RunBattle(aAttackDice-Delta, aDefenseDice);
- 	end else begin
+    // Execute battle
+    RunBattle:= gaWinRolls[AttackDiceRoll, DefenseDiceRoll] * RunBattle(aAttackDice, aDefenseDice-Delta)			// outcome win
+    	          + gaTieRolls[AttackDiceRoll, DefenseDiceRoll] * RunBattle(aAttackDice-1, aDefenseDice-1)			// outcome tie
+       	        + gaLoseRolls[AttackDiceRoll, DefenseDiceRoll] * RunBattle(aAttackDice-Delta, aDefenseDice);	// outcome lose
+  // If value is already calculated, return that instead
+  end else begin
     RunBattle:= gaProbability[aAttackDice, aDefenseDice];
   end;
 end;
 
+// Initialize odds for roll possibilities
+// [a,d] a=attack, d=defense
 procedure InitializeRolls;
 begin
 	gaWinRolls[1,1]:= 15/36;
@@ -67,6 +76,7 @@ begin
   gaTieRolls[3,2]:= 2611/7776;
 end;
 
+// Initialize odds for first battle outcomes
 procedure InitializeBaseBattles;
 begin
 	gaProbability[1, 1]:= 5/12;
@@ -74,6 +84,7 @@ begin
   gaProbability[2, 1]:= 125/216 + (1-(125/216)) * 5/12;
 end;
 
+// Calculate all battles in grid
 procedure CalculateBattles;
 var i, j: integer;
 begin
@@ -86,6 +97,7 @@ begin
   end;
 end;
 
+// Print output of 20 attack/20 defense in a grid
 procedure PrintProbabilities;
 var i, j: integer;
 begin
